@@ -6,14 +6,6 @@
 
 ------
 
-### Дополнительные материалы для выполнения задания
-
-1. [Инструкция по установке NFS в MicroK8S](https://microk8s.io/docs/nfs). 
-2. [Описание Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/). 
-3. [Описание динамического провижининга](https://kubernetes.io/docs/concepts/storage/dynamic-provisioning/). 
-4. [Описание Multitool](https://github.com/wbitt/Network-MultiTool).
-
-------
 
 ### Задание 1
 
