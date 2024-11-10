@@ -1,16 +1,8 @@
-ku  b# Домашнее задание к занятию «Хранение в K8s. Часть 2»
+# Домашнее задание к занятию «Хранение в K8s. Часть 2»
 
 ### Цель задания
 
 В тестовой среде Kubernetes нужно создать PV и продемострировать запись и хранение файлов.
-
-------
-
-### Чеклист готовности к домашнему заданию
-
-1. Установленное K8s-решение (например, MicroK8S).
-2. Установленный локальный kubectl.
-3. Редактор YAML-файлов с подключенным GitHub-репозиторием.
 
 ------
 
@@ -229,19 +221,93 @@ Sat Nov  9 06:21:43 UTC 2024
 
 ### Задание 2
 
-**Что нужно сделать**
 
 Создать Deployment приложения, которое может хранить файлы на NFS с динамическим созданием PV.
 
-1. Включить и настроить NFS-сервер на MicroK8S.
-2. Создать Deployment приложения состоящего из multitool, и подключить к нему PV, созданный автоматически на сервере NFS.
-3. Продемонстрировать возможность чтения и записи файла изнутри пода. 
-4. Предоставить манифесты, а также скриншоты или вывод необходимых команд.
+Включитл и настроил NFS-сервер на MicroK8S:
+```bash
+user@microk8s:~/kuber-homeworks-2.2$ microk8s enable storage
+Infer repository core for addon storage
+Addon core/storage is already enabled
+user@microk8s:~/kuber-homeworks-2.2$ kubectl get storageclasses.storage.k8s.io 
+NAME                          PROVISIONER            RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+microk8s-hostpath (default)   microk8s.io/hostpath   Delete          WaitForFirstConsumer   false                  16d
+```
+
+Создал Deployment приложения состоящего из multitool с подключением к встроенному nfs:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-nfs
+  labels:
+    app: nfs-app
+  namespace: homework
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-app
+  template:
+    metadata:
+      labels:
+        app: nfs-app
+    spec:
+      containers:
+      - name: multitool
+        image: wbitt/network-multitool
+        env:
+          - name: HTTP_PORT
+            value: "8080"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: vol-nfs
+          mountPath: /nfs-share
+      volumes:
+      - name: vol-nfs
+        persistentVolumeClaim:
+          claimName: nfs
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs
+spe
+  storageClassName: "microk8s-hostpath"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+
+```
+Применяю и смотрю какие PV и PVC создались:
+```bash
+user@microk8s:~/kuber-homeworks-2.2$ kubectl get pvc
+NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS        VOLUMEATTRIBUTESCLASS   AGE
+nfs    Bound    pvc-e824edce-5c3e-43ee-9c6c-b79d9f7d5a0c   10Mi       RWO            microk8s-hostpath   <unset>                 18s
+user@microk8s:~/kuber-homeworks-2.2$ kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM          STORAGECLASS        VOLUMEATTRIBUTESCLASS   REASON   AGE
+pvc-e824edce-5c3e-43ee-9c6c-b79d9f7d5a0c   10Mi       RWO            Delete           Bound    homework/nfs   microk8s-hostpath   <unset>                          10s
+user@microk8s:~/kuber-homeworks-2.2$ 
+```
+
+Проверяю возможность чтения и записи файла изнутри пода. 
+```bash
+user@microk8s:~/kuber-homeworks-2.2$ kubectl exec -ti pods/deployment-nfs-96f8c65c9-klftw -- sh
+/ # cd /nfs-share/
+/nfs-share # echo > test.txt Hi!!!
+/nfs-share # cat test.txt 
+Hi!!!
+/nfs-share # rm test.txt 
+/nfs-share # ls
+/nfs-share # 
+```
+
 
 ------
 
-### Правила приёма работы
 
-1. Домашняя работа оформляется в своём Git-репозитории в файле README.md. Выполненное задание пришлите ссылкой на .md-файл в вашем репозитории.
-2. Файл README.md должен содержать скриншоты вывода необходимых команд `kubectl`, а также скриншоты результатов.
-3. Репозиторий должен содержать тексты манифестов или ссылки на них в файле README.md.
